@@ -25,7 +25,7 @@ class MidasDetector:
             depth_pt = depth_pt.cpu().numpy()
             depth_image = (depth_pt * 255.0).clip(0, 255).astype(np.uint8)
 
-            depth_np = depth.cpu().numpy()
+            depth_np = depth.cpu().float().numpy()
             x = cv2.Sobel(depth_np, cv2.CV_32F, 1, 0, ksize=3)
             y = cv2.Sobel(depth_np, cv2.CV_32F, 0, 1, ksize=3)
             z = np.ones_like(x) * a
