@@ -2,6 +2,7 @@ import einops
 import torch
 import torch as th
 import torch.nn as nn
+import numpy as np
 
 from ldm.modules.diffusionmodules.util import (
     conv_nd,
@@ -31,10 +32,10 @@ class ControlledUnetModel(UNetModel):
                 hs.append(h)
             h = self.middle_block(h, emb, context)
 
-        h += control.pop()
+        if control is not None: h += control.pop()
 
         for i, module in enumerate(self.output_blocks):
-            if only_mid_control:
+            if only_mid_control or control is None:
                 h = torch.cat([h, hs.pop()], dim=1)
             else:
                 h = torch.cat([h, hs.pop() + control.pop()], dim=1)
@@ -323,7 +324,20 @@ class ControlLDM(LatentDiffusion):
         control = control.to(memory_format=torch.contiguous_format).float()
         return x, dict(c_crossattn=[c], c_concat=[control])
 
+    # def apply_model(self, x_noisy, t, cond, *args, **kwargs):
+    #     assert isinstance(cond, dict)
+    #     diffusion_model = self.model.diffusion_model
+    #     cond_txt = torch.cat(cond['c_crossattn'], 1)
+    #     cond_hint = torch.cat(cond['c_concat'], 1)
+
+    #     control = self.control_model(x=x_noisy, hint=cond_hint, timesteps=t, context=cond_txt)
+    #     eps = diffusion_model(x=x_noisy, timesteps=t, context=cond_txt, control=control, only_mid_control=self.only_mid_control)
+
+    #     return eps
+
     def apply_model(self, x_noisy, t, cond, *args, **kwargs):
+        
+        t_ratio = 1-t[0]/self.num_timesteps; #print(t, t_ratio)
         assert isinstance(cond, dict)
         diffusion_model = self.model.diffusion_model
         cond_txt = torch.cat(cond['c_crossattn'], 1)
@@ -337,11 +351,13 @@ class ControlLDM(LatentDiffusion):
           active_models = {}
           for key in controlnet_multimodel.keys():
             settings = controlnet_multimodel[key]
-            if settings['weight']!=0:# and t[0]>=settings['start'] and t[0]<settings['end']:
+            if settings['weight']!=0 and t_ratio>=settings['start'] and t_ratio<=settings['end']:
               active_models[key] = controlnet_multimodel[key]
+        #   print('active_models', active_models)
           weights = np.array([active_models[m]["weight"] for m in active_models.keys()])
           weights = weights/weights.sum()
           for i,key in enumerate(active_models.keys()):
+            # print(i)
             cond_hint = torch.cat([cond['c_concat'][key]], 1)
             control = loaded_controlnets[key](x=x_noisy, hint=cond_hint, timesteps=t, context=cond_txt)
             if control_wsum is None: control_wsum = [weights[i]*o for o in control]
