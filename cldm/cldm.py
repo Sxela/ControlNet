@@ -358,10 +358,13 @@ class ControlLDM(LatentDiffusion):
           weights = weights/weights.sum()
           for i,key in enumerate(active_models.keys()):
             # print(i)
-            cond_hint = torch.cat([cond['c_concat'][key]], 1)
-            control = loaded_controlnets[key](x=x_noisy, hint=cond_hint, timesteps=t, context=cond_txt)
-            if control_wsum is None: control_wsum = [weights[i]*o for o in control]
-            else: control_wsum = [weights[i]*c+cs for c,cs in zip(control,control_wsum)]
+            try: 
+                cond_hint = torch.cat([cond['c_concat'][key]], 1)
+                control = loaded_controlnets[key](x=x_noisy, hint=cond_hint, timesteps=t, context=cond_txt)
+                if control_wsum is None: control_wsum = [weights[i]*o for o in control]
+                else: control_wsum = [weights[i]*c+cs for c,cs in zip(control,control_wsum)]
+            except: 
+                pass
           control = control_wsum
         else:
             cond_hint = torch.cat(cond['c_concat'], 1)
