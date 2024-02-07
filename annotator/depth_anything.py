@@ -33,7 +33,7 @@ class DepthAnythingDetector:
 
     model_dir = os.path.join(models_path, "depth_anything")
 
-    def __init__(self, device: torch.device):
+    def __init__(self, ckpt, device: torch.device):
         self.device = device
         self.model = (
             DPT_DINOv2(
@@ -45,14 +45,7 @@ class DepthAnythingDetector:
             .to(device)
             .eval()
         )
-        remote_url = os.environ.get(
-            "CONTROLNET_DEPTH_ANYTHING_MODEL_URL",
-            "https://huggingface.co/spaces/LiheYoung/Depth-Anything/resolve/main/checkpoints/depth_anything_vitl14.pth",
-        )
-        model_path = load_model(
-            "depth_anything_vitl14.pth", remote_url=remote_url, model_dir=self.model_dir
-        )
-        self.model.load_state_dict(torch.load(model_path))
+        self.model.load_state_dict(torch.load(ckpt))
 
     def __call__(self, image: np.ndarray, colored: bool = True) -> np.ndarray:
         self.model.to(self.device)
