@@ -36,3 +36,17 @@ def resize_image(input_image, resolution):
     W = int(np.round(W / 64.0)) * 64
     img = cv2.resize(input_image, (W, H), interpolation=cv2.INTER_LANCZOS4 if k > 1 else cv2.INTER_AREA)
     return img
+
+def load_model(filename: str, remote_url: str, model_dir: str) -> str:
+    """
+    Load the model from the specified filename and remote URL if it doesn't exist locally.
+    Args:
+        filename (str): The filename of the model.
+        remote_url (str): The remote URL of the model.
+    """
+    local_path = os.path.join(model_dir, filename)
+    if not os.path.exists(local_path):
+        from basicsr.utils.download_util import load_file_from_url
+
+        load_file_from_url(remote_url, model_dir=model_dir)
+    return local_path
